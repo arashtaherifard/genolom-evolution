@@ -1,0 +1,73 @@
+project:
+  name: genolom-evolution
+  phase: 2
+  mode: development
+  protocol_status: framework_frozen_parameters_not_final
+
+dataset:
+  path: data/generation_0.xlsx
+  manifest: data/dataset_manifest.json
+
+reproducibility:
+  seed: 42
+
+micro_fitness:
+  cohesion_weight: 0.5
+  dependence_weight: 0.5
+  weight_grid_step: 0.1
+
+selection:
+  strategy: fitness_proportionate
+  zero_fitness_fallback: uniform
+  repeated_parent_selection: true
+
+evolution:
+  max_generations: 50
+  convergence:
+    enabled: true
+    epsilon: 0.001
+    patience: 5
+
+  # Final scientific values are intentionally not guessed here.
+  mutation:
+    enabled: true
+    rate: null
+  crossover:
+    enabled: true
+    rate: null
+
+  # Required dependency of crossover/fusion/defusion eligibility.
+  maturity_age: null
+  max_parent_participations_per_generation: null
+
+  longevity:
+    enabled: true
+    initial_chance: null
+    reproduction_reward: null
+    inactivity_penalty: null
+  perish:
+    enabled: true
+    threshold: 0.0
+
+  fusion_defusion:
+    history_tracking_enabled: true
+    threshold:
+      minimum: 0
+      maximum: null
+
+coverage:
+  threshold: 1
+  reference_root: computer science
+
+content:
+  enabled: false
+  generator_provider: null
+  generator_model: null
+  validate_before_acceptance: true
+  operators:
+    abstraction: true
+    elaboration: true
+    probing: true
+
+outputs:
+  root: outputs/runs

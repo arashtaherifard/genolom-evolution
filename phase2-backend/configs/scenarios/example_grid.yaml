@@ -1,0 +1,14 @@
+name: preliminary-sensitivity-grid
+fitness_weight_pairs:
+  - {cohesion_weight: 0.0, dependence_weight: 1.0}
+  - {cohesion_weight: 0.25, dependence_weight: 0.75}
+  - {cohesion_weight: 0.5, dependence_weight: 0.5}
+  - {cohesion_weight: 0.75, dependence_weight: 0.25}
+  - {cohesion_weight: 1.0, dependence_weight: 0.0}
+parameters:
+  evolution.mutation.rate: [0.05, 0.10, 0.20]
+  evolution.crossover.rate: [0.50, 0.70, 0.90]
+seeds: [11, 22, 33]
+notes: >
+  Example only. Fitness weights are coupled so they always sum to one.
+  Final ranges and seed count must be frozen before final experiments.

@@ -1,0 +1,28 @@
+extends: default.yaml
+
+project:
+  mode: development
+  protocol_status: development_only_not_for_final_results
+
+# These values exist only so the complete backend workflow can be smoke-tested.
+# They are NOT the frozen final experimental protocol.
+evolution:
+  mutation:
+    rate: 0.10
+  crossover:
+    rate: 0.70
+  maturity_age: 1
+  max_parent_participations_per_generation: 5
+  longevity:
+    initial_chance: 3.0
+    reproduction_reward: 1.0
+    inactivity_penalty: 1.0
+  perish:
+    threshold: 0.0
+  fusion_defusion:
+    threshold:
+      minimum: 0
+      maximum: 5
+
+coverage:
+  threshold: 1

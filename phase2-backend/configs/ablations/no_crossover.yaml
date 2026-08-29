@@ -1,0 +1,4 @@
+extends: ../default.yaml
+evolution:
+  crossover:
+    enabled: false

@@ -1,0 +1,11 @@
+{
+  "dataset_id": "openstax-cs-ch01-strict-cso-v1",
+  "source_name": "ch01_cso_main.xlsx",
+  "source_phase": "phase1",
+  "domain": "computer_science",
+  "ontology_name": "CSO",
+  "phase1_variant": "main_strict_syntactic",
+  "learning_object_count": 298,
+  "sha256": "600f766adbd03798f8b9e46a1416641fa6c1fbe535acd027cf5da9a2b735126b",
+  "notes": "Frozen Phase 2 Generation 0. Proposal-aligned Phase 1 output."
+}
