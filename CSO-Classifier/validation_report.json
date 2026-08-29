@@ -1,0 +1,22 @@
+{
+  "population_rows": 298,
+  "fixed_metadata": {
+    "intendedEndUserRole": "Learner",
+    "context": "Higher Education",
+    "typicalAgeRange": "18+"
+  },
+  "interactivity_level_corrections": {
+    "total": 180,
+    "Expositive + Low -> Expositive + Very Low": 57,
+    "Expositive + Medium -> Expositive + Very Low": 72,
+    "Active + Low -> Active + Medium": 50,
+    "Mixed + Medium -> Mixed + Low": 1
+  },
+  "remaining_interactivity_constraint_violations": 0,
+  "impossible_semanticDensity_difficulty_violations": 0,
+  "keyword_rows": {
+    "ch01_cso_main.xlsx": 188,
+    "ch01_cso_extended.xlsx": 223
+  },
+  "learningResourceType_transition_issue": "intentionally deferred to Phase 2"
+}

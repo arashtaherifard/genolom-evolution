@@ -1,0 +1,2 @@
+cso-classifier==4.0.1
+openpyxl>=3.1,<4
