@@ -11,6 +11,10 @@ from .validators import ContentValidationResult
 
 class DeterministicTestGenerator:
     provider_name = "deterministic-test"
+    # Explicit M4 compatibility hook. This generator is a unit-test double only;
+    # it may exercise orchestration through a proposal-blocked plan so legacy M3
+    # state/archival tests remain independent of scientific realization support.
+    test_only_allow_blocked_plan = True
 
     def generate(self, request: GenerationRequest) -> GenerationResponse:
         prefix = {

@@ -1,0 +1,12 @@
+MILESTONE4_IMPLEMENTATION.md
+M4_TEST_STATUS.md
+FILES_IN_M4_OVERLAY.txt
+src/genolom_evolution/content/__init__.py
+src/genolom_evolution/content/generator.py
+src/genolom_evolution/content/grounding.py
+src/genolom_evolution/content/planning.py
+src/genolom_evolution/content/proposal_rules.py
+src/genolom_evolution/content/operators/base.py
+src/genolom_evolution/evolution/session.py
+tests/test_m4_content_planning.py
+tests/test_m4_proposal_tables.py

@@ -7,7 +7,10 @@ import random
 from typing import Any, Sequence
 
 from ..content.operators import get_content_operator
-from ..content.planning import target_realized_mismatches
+from ..content.planning import (
+    target_realized_mismatches,
+    target_realized_direction_mismatches,
+)
 from ..experiments.seeding import derive_event_seed
 from ..fitness.micro import calculate_micro_fitness
 from ..models.individual import Individual
@@ -312,6 +315,8 @@ class PriorityEvolutionSession:
         generator,
         validator,
         seed: int | None = None,
+        grounding_context=None,
+        planning_rules=None,
     ) -> dict[str, Any]:
         child = self._find(child_id, include_pending=True)
         if child_id not in self.pending_offspring:
@@ -336,19 +341,23 @@ class PriorityEvolutionSession:
             generator=generator,
             validator=validator,
             seed=content_seed,
+            grounding_context=grounding_context,
+            planning_rules=planning_rules,
         )
 
         realized = result.validation.realized_genome
         rejection_reasons: list[str] = []
 
+        if not result.accepted:
+            rejection_reasons.extend(result.validation.reasons)
+
         if result.accepted and realized is None:
             rejection_reasons.append("missing_realized_genome")
 
         if result.accepted and realized is not None:
+            content_plan = result.request.content_plan
             controlled_traits = (
-                ()
-                if result.request.content_plan is None
-                else result.request.content_plan.controlled_traits
+                () if content_plan is None else content_plan.controlled_traits
             )
             mismatches = target_realized_mismatches(
                 target_genome,
@@ -358,6 +367,14 @@ class PriorityEvolutionSession:
             rejection_reasons.extend(
                 f"target_realized_mismatch:{field}" for field in mismatches
             )
+            if content_plan is not None:
+                direction_mismatches = target_realized_direction_mismatches(
+                    content_plan, realized
+                )
+                rejection_reasons.extend(
+                    f"target_realized_direction_mismatch:{field}"
+                    for field in direction_mismatches
+                )
 
         session_accepted = bool(result.accepted and not rejection_reasons)
         event_type = "content_accepted" if session_accepted else "content_rejected"

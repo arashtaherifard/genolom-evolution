@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 from typing import Any, Protocol
 from ..models.genome import GenoLOMGenome
+from .grounding import GroundingContext
 from .planning import ContentPlan
 
 
@@ -17,6 +18,7 @@ class GenerationRequest:
     # Appended for backward-compatible positional construction.
     source_genome: GenoLOMGenome | None = None
     content_plan: ContentPlan | None = None
+    grounding_context: GroundingContext | None = None
 
 
 @dataclass(frozen=True, slots=True)
