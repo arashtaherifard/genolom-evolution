@@ -35,6 +35,15 @@ from .lifecycle import (
 )
 from .mutation import mutate_individual, MutationResult
 from .offspring import OffspringIdAllocator, create_offspring
+from .dna import FusionBinaryOperator
+from .fusion_defusion import (
+    FusionDefusionThreshold,
+    fuse_genomes,
+    recover_defusion_components,
+    record_fusion_participation,
+    record_defusion_participation,
+)
+from .composition import compose_individuals, recover_composition_components
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +58,22 @@ class AppliedOperatorResult:
             "operator": self.operator,
             "operator_result": self.operator_result,
             "offspring": self.offspring,
+            "event": self.event,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class AppliedStructuralOperatorResult:
+    operator: str
+    operator_result: dict[str, Any]
+    offspring: tuple[dict[str, Any], ...]
+    event: dict[str, Any] | None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "operator": self.operator,
+            "operator_result": self.operator_result,
+            "offspring": [dict(item) for item in self.offspring],
             "event": self.event,
         }
 
@@ -307,6 +332,286 @@ class PriorityEvolutionSession:
             "crossover", result.to_dict(), child.to_dict(), event.to_dict()
         )
 
+    def _fusion_defusion_policy(self) -> FusionDefusionThreshold:
+        threshold_cfg = (
+            self.config.get("evolution", {})
+            .get("fusion_defusion", {})
+            .get("threshold", {})
+        )
+        return FusionDefusionThreshold(
+            minimum=int(threshold_cfg.get("minimum", 0)),
+            maximum=(
+                None
+                if threshold_cfg.get("maximum") is None
+                else int(threshold_cfg["maximum"])
+            ),
+        )
+
+    def apply_fusion(
+        self,
+        parent_a_id: str,
+        parent_b_id: str,
+        *,
+        binary_operator: str | FusionBinaryOperator = FusionBinaryOperator.AND,
+    ) -> AppliedStructuralOperatorResult:
+        if parent_a_id == parent_b_id:
+            raise ValueError("Fusion requires two distinct parent individuals.")
+        a = self._find(parent_a_id, include_pending=False)
+        b = self._find(parent_b_id, include_pending=False)
+        for parent in (a, b):
+            eligibility = self.eligibility(parent.individual_id, operator="fusion")
+            if not eligibility["eligible"]:
+                raise ValueError(
+                    f"Parent {parent.individual_id} is not eligible for fusion: "
+                    f"{eligibility['reasons']}"
+                )
+
+        policy = self._fusion_defusion_policy()
+        if not policy.can_fuse(a) or not policy.can_fuse(b):
+            raise ValueError("Fusion threshold does not allow another fusion participation.")
+
+        a.generation_participations += 1
+        b.generation_participations += 1
+        result = fuse_genomes(a, b, binary_operator=binary_operator)
+        if not result.success or result.target_genome is None:
+            event = EvolutionEvent(
+                event_type="fusion_failed",
+                generation=self.generation + 1,
+                parent_ids=(parent_a_id, parent_b_id),
+                payload=result.to_dict(),
+            )
+            self.lineage.record(event)
+            return AppliedStructuralOperatorResult(
+                "fusion", result.to_dict(), (), event.to_dict()
+            )
+
+        child = create_offspring(
+            allocator=self.allocator,
+            generation=self.generation + 1,
+            parent_ids=(parent_a_id, parent_b_id),
+            created_by="fusion",
+            target_genome=result.target_genome,
+            source_genome=a.genome,
+            content=a.content,
+            content_status="pending_generation",
+        )
+        child.extra.update(
+            {
+                "structural_operator": "fusion",
+                "source_parent_ids": [parent_a_id, parent_b_id],
+                "fusion": result.to_dict(),
+                "fusion_provenance": deepcopy(result.provenance or {}),
+                "requires_structural_content_realizer": True,
+            }
+        )
+        self.pending_offspring[child.individual_id] = child
+        event = EvolutionEvent(
+            event_type="fusion_target_created",
+            generation=self.generation + 1,
+            individual_ids=(child.individual_id,),
+            parent_ids=(parent_a_id, parent_b_id),
+            payload=result.to_dict(),
+        )
+        record_fusion_participation(a, event.event_id, policy)
+        record_fusion_participation(b, event.event_id, policy)
+        record_fusion_participation(child, event.event_id, policy)
+        self.lineage.record(event)
+        return AppliedStructuralOperatorResult(
+            "fusion", result.to_dict(), (child.to_dict(),), event.to_dict()
+        )
+
+    def apply_defusion(self, fused_id: str) -> AppliedStructuralOperatorResult:
+        fused = self._find(fused_id, include_pending=False)
+        eligibility = self.eligibility(fused_id, operator="defusion")
+        if not eligibility["eligible"]:
+            raise ValueError(
+                f"Parent {fused_id} is not eligible for defusion: {eligibility['reasons']}"
+            )
+        policy = self._fusion_defusion_policy()
+        if not policy.can_defuse(fused):
+            raise ValueError("Defusion threshold does not allow another defusion participation.")
+
+        result = recover_defusion_components(fused)
+        fused.generation_participations += 1
+        if not result.success:
+            event = EvolutionEvent(
+                event_type="defusion_failed",
+                generation=self.generation + 1,
+                parent_ids=(fused_id,),
+                payload=result.to_dict(),
+            )
+            self.lineage.record(event)
+            return AppliedStructuralOperatorResult(
+                "defusion", result.to_dict(), (), event.to_dict()
+            )
+
+        children: list[Individual] = []
+        for component in result.components:
+            child = create_offspring(
+                allocator=self.allocator,
+                generation=self.generation + 1,
+                parent_ids=(fused_id,),
+                created_by="defusion",
+                target_genome=component.target_genome,
+                source_genome=fused.genome,
+                content=fused.content,
+                content_status="pending_generation",
+                source_type=component.source_metadata.get("source_type", ""),
+                source_page=component.source_metadata.get("source_page", ""),
+                source_row_id=component.source_metadata.get("source_row_id", ""),
+            )
+            child.extra.update(
+                {
+                    "structural_operator": "defusion",
+                    "source_parent_id": fused_id,
+                    "recovered_source_parent_id": component.source_parent_id,
+                    "defusion_component": component.to_dict(),
+                    "defusion_provenance": deepcopy(result.provenance),
+                    "requires_structural_content_realizer": True,
+                }
+            )
+            self.pending_offspring[child.individual_id] = child
+            children.append(child)
+
+        event = EvolutionEvent(
+            event_type="defusion_targets_created",
+            generation=self.generation + 1,
+            individual_ids=tuple(child.individual_id for child in children),
+            parent_ids=(fused_id,),
+            payload=result.to_dict(),
+        )
+        record_defusion_participation(fused, event.event_id, policy)
+        for child in children:
+            record_defusion_participation(child, event.event_id, policy)
+        self.lineage.record(event)
+        return AppliedStructuralOperatorResult(
+            "defusion",
+            result.to_dict(),
+            tuple(child.to_dict() for child in children),
+            event.to_dict(),
+        )
+
+    def apply_composition(
+        self,
+        parent_ids: Sequence[str],
+        *,
+        roles: Sequence[str] | None = None,
+    ) -> AppliedStructuralOperatorResult:
+        if len(parent_ids) < 2:
+            raise ValueError("Composition requires at least two parent individuals.")
+        if len(set(parent_ids)) != len(parent_ids):
+            raise ValueError("Composition requires distinct parent individuals.")
+        parents = [self._find(parent_id, include_pending=False) for parent_id in parent_ids]
+        for parent in parents:
+            eligibility = self.eligibility(parent.individual_id, operator="composition")
+            if not eligibility["eligible"]:
+                raise ValueError(
+                    f"Parent {parent.individual_id} is not eligible for composition: "
+                    f"{eligibility['reasons']}"
+                )
+
+        for parent in parents:
+            parent.generation_participations += 1
+        result = compose_individuals(parents, roles=roles)
+        ordered_parent_ids = tuple(result.provenance["parent_ids"])
+        child = create_offspring(
+            allocator=self.allocator,
+            generation=self.generation + 1,
+            parent_ids=ordered_parent_ids,
+            created_by="composition",
+            target_genome=result.container_genome,
+            source_genome=result.container_genome,
+            content=result.content,
+            content_status="accepted",
+        )
+        child.extra.update(
+            {
+                "structural_operator": "composition",
+                "compound": True,
+                "composition": result.to_dict(),
+                "container_genome_policy": "first_ordered_component_inheritance_v1_nonsemantic",
+                "not_llm_rewritten": True,
+            }
+        )
+        self.pending_offspring[child.individual_id] = child
+        event = EvolutionEvent(
+            event_type="composition",
+            generation=self.generation + 1,
+            individual_ids=(child.individual_id,),
+            parent_ids=ordered_parent_ids,
+            payload=result.to_dict(),
+        )
+        self.lineage.record(event)
+        for parent_id in ordered_parent_ids:
+            self.successful_parent_participations[parent_id] += 1
+        return AppliedStructuralOperatorResult(
+            "composition", result.to_dict(), (child.to_dict(),), event.to_dict()
+        )
+
+    def apply_decomposition(self, compound_id: str) -> AppliedStructuralOperatorResult:
+        compound = self._find(compound_id, include_pending=False)
+        eligibility = self.eligibility(compound_id, operator="decomposition")
+        if not eligibility["eligible"]:
+            raise ValueError(
+                f"Parent {compound_id} is not eligible for decomposition: {eligibility['reasons']}"
+            )
+        result = recover_composition_components(compound)
+        compound.generation_participations += 1
+        if not result.success:
+            event = EvolutionEvent(
+                event_type="decomposition_failed",
+                generation=self.generation + 1,
+                parent_ids=(compound_id,),
+                payload=result.to_dict(),
+            )
+            self.lineage.record(event)
+            return AppliedStructuralOperatorResult(
+                "decomposition", result.to_dict(), (), event.to_dict()
+            )
+
+        children: list[Individual] = []
+        for component in result.components:
+            child = create_offspring(
+                allocator=self.allocator,
+                generation=self.generation + 1,
+                parent_ids=(compound_id,),
+                created_by="decomposition",
+                target_genome=component.genome,
+                source_genome=component.genome,
+                content=component.content,
+                content_status="accepted",
+                source_type=component.source_type,
+                source_page=component.source_page,
+                source_row_id=component.source_row_id,
+            )
+            child.extra.update(
+                {
+                    "structural_operator": "decomposition",
+                    "decomposed_from": compound_id,
+                    "original_component": component.to_dict(),
+                    "original_source_parent_id": component.source_parent_id,
+                    "not_llm_rewritten": True,
+                }
+            )
+            self.pending_offspring[child.individual_id] = child
+            children.append(child)
+
+        event = EvolutionEvent(
+            event_type="decomposition",
+            generation=self.generation + 1,
+            individual_ids=tuple(child.individual_id for child in children),
+            parent_ids=(compound_id,),
+            payload=result.to_dict(),
+        )
+        self.lineage.record(event)
+        self.successful_parent_participations[compound_id] += 1
+        return AppliedStructuralOperatorResult(
+            "decomposition",
+            result.to_dict(),
+            tuple(child.to_dict() for child in children),
+            event.to_dict(),
+        )
+
     def apply_content_operator(
         self,
         child_id: str,
@@ -324,6 +629,12 @@ class PriorityEvolutionSession:
         if child_id not in self.pending_offspring:
             raise ValueError(
                 "Content operators can only finalize pending offspring in this milestone."
+            )
+        if child.created_by in {"fusion", "defusion"}:
+            raise ValueError(
+                "Fusion/Defusion offspring require the dedicated structural content "
+                "realizer planned for the deferred real-model M5B stage; generic "
+                "single-source content operators must not fake this realization."
             )
 
         source_id = str(child.extra.get("source_parent_id") or "")

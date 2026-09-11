@@ -78,15 +78,17 @@ class Phase2Engine:
                 "fusion_history",
                 "defusion_history",
                 "fusion_defusion_threshold",
+                "fusion_execution",
+                "defusion_execution",
+                "composition",
+                "decomposition",
                 "operator_events",
                 "lineage",
                 "immutable_run_store",
             ],
             "deferred_but_hooked": [
-                "fusion_execution",
-                "defusion_execution",
-                "composition",
-                "decomposition",
+                "fusion_defusion_content_realization_m5b",
+                "unstructured_multimedia_decomposition",
                 "expert_metric_validation",
                 "held_out_chapters",
                 "additional_textbooks",
@@ -95,7 +97,7 @@ class Phase2Engine:
                 "inter_rater_reliability",
                 "learner_study",
             ],
-            "ui_contract_version": "1.1",
+            "ui_contract_version": "1.2",
         }
 
     def _load(self):
@@ -227,7 +229,7 @@ class Phase2Engine:
             "threshold": policy.to_dict(),
             "can_fuse": policy.can_fuse(individual),
             "can_defuse": policy.can_defuse(individual),
-            "note": "History/threshold are operational; actual Fusion/Defusion transformations are a later non-priority operator milestone.",
+            "note": "M6 executes proposal-traceable Fusion targets and provenance-based V1 Defusion. Real Fusion/Defusion content realization remains deferred to M5B.",
         })
 
     def content_operator_contracts(self) -> ServiceResult:
@@ -268,6 +270,59 @@ class Phase2Engine:
             return ServiceResult(True, self._session.apply_crossover(parent_a_id, parent_b_id, force_rate=force_rate).to_dict())
         except Exception as exc:
             return ServiceResult(False, None, ({"code": "crossover_error", "message": str(exc)},))
+
+    def session_apply_fusion(
+        self,
+        parent_a_id: str,
+        parent_b_id: str,
+        *,
+        binary_operator: str = "AND",
+    ) -> ServiceResult:
+        if self._session is None:
+            self.start_priority_session()
+        try:
+            return ServiceResult(
+                True,
+                self._session.apply_fusion(
+                    parent_a_id, parent_b_id, binary_operator=binary_operator
+                ).to_dict(),
+            )
+        except Exception as exc:
+            return ServiceResult(False, None, ({"code": "fusion_error", "message": str(exc)},))
+
+    def session_apply_defusion(self, fused_id: str) -> ServiceResult:
+        if self._session is None:
+            self.start_priority_session()
+        try:
+            return ServiceResult(True, self._session.apply_defusion(fused_id).to_dict())
+        except Exception as exc:
+            return ServiceResult(False, None, ({"code": "defusion_error", "message": str(exc)},))
+
+    def session_apply_composition(
+        self,
+        parent_ids: list[str] | tuple[str, ...],
+        *,
+        roles: list[str] | tuple[str, ...] | None = None,
+    ) -> ServiceResult:
+        if self._session is None:
+            self.start_priority_session()
+        try:
+            return ServiceResult(
+                True,
+                self._session.apply_composition(parent_ids, roles=roles).to_dict(),
+            )
+        except Exception as exc:
+            return ServiceResult(False, None, ({"code": "composition_error", "message": str(exc)},))
+
+    def session_apply_decomposition(self, compound_id: str) -> ServiceResult:
+        if self._session is None:
+            self.start_priority_session()
+        try:
+            return ServiceResult(
+                True, self._session.apply_decomposition(compound_id).to_dict()
+            )
+        except Exception as exc:
+            return ServiceResult(False, None, ({"code": "decomposition_error", "message": str(exc)},))
 
     def session_lineage(self, individual_id: str) -> ServiceResult:
         if self._session is None:

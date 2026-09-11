@@ -1,4 +1,4 @@
-# Phase 2 Priority Scope (Blue Rows) - Milestone 2
+# Phase 2 Priority Scope and Structural Operators - through Milestone 6
 
 This milestone implements the updated task-sheet priority rows first, plus only the non-blue dependencies required to make those rows operational and scientifically testable.
 
@@ -40,9 +40,9 @@ These are included because the priority rows depend on them:
 
 ## Important non-invention rule
 
-Actual **Fusion** and **Defusion genome transformations** are not fabricated in this milestone. Their blue priority variables (history and threshold) are fully represented, gated, serializable, and testable, but the transformation operators depend on later Fusion/Defusion rule definitions and/or matrices. The backend already exposes the state hooks required to add those operators without redesign.
+M6 implements only the structural behavior supported by the proposal plus explicitly documented V1 operationalizations. Binary Fusion uses the proposal's Table-2 DNA representation and named AND/OR/XOR/NAND operators; invalid one-hot DNA is rejected rather than repaired. The proposal does not provide a sufficient general inverse for Defusion, so Defusion V1 is restricted to Fusion-derived objects with stored parent provenance. Composition/Decomposition are deterministic and do not rewrite content.
 
-Likewise, learningResourceType mutation/crossover behavior is only used where Appendix B provides an explicit rule. Unsupported source types are conservatively inherited/left unchanged rather than given invented transitions.
+A real Fusion/Defusion content realizer is intentionally deferred to M5B. Likewise, learningResourceType mutation/crossover behavior is only used where Appendix B provides an explicit rule. Unsupported source types are not given invented transitions.
 
 ## Coverage interpretation
 

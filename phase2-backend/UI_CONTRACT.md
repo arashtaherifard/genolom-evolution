@@ -1,4 +1,4 @@
-# UI Contract - v1.1
+# UI Contract - v1.2
 
 Phase 2 is backend-first and UI-aware.
 
@@ -43,6 +43,10 @@ Stateful session operations:
 - `start_priority_session(seed)`
 - `session_apply_mutation(parent_id, ...)`
 - `session_apply_crossover(parent_a_id, parent_b_id, ...)`
+- `session_apply_fusion(parent_a_id, parent_b_id, binary_operator)`
+- `session_apply_defusion(fused_id)`
+- `session_apply_composition(parent_ids, roles=None)`
+- `session_apply_decomposition(compound_id)`
 - `session_apply_content_operator(child_id, operator_name, ...)`
 - `session_lineage(individual_id)`
 - `session_snapshot()`

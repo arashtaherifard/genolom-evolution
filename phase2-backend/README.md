@@ -4,7 +4,7 @@ Research-grade, UI-aware backend for Phase 2 of the GenoLOM evolutionary educati
 
 ## Status
 
-This package is **Milestone 2: Priority (Blue-Row) Operators & Variables**. It keeps all Milestone-1 architecture and implements the updated task-sheet priority scope plus required dependencies.
+This package now includes the completed **Milestone 6 structural-operator layer** on top of the M1-M5A backend. Earlier priority, planning, target/realized, and content-validation architecture remains intact.
 
 Implemented now:
 
@@ -23,14 +23,17 @@ Implemented now:
 - Abstraction, Elaboration, and Probing content-operator contracts/execution;
 - Age, Longevity Chance, and Perish;
 - Fusion/Defusion History and Threshold state/policy;
+- proposal-traceable binary Fusion target generation (AND / OR / XOR / NAND) with strict DNA validation;
+- provenance-based V1 Defusion target recovery;
+- deterministic Composition / Decomposition with preserved component boundaries and no LLM rewriting;
 - generation-level Coverage Span + Coverage Threshold + required Coverage Rate;
 - operator events and full lineage tracking;
 - reproducible stateful priority evolution session;
 - UI-facing service facade with serializable query/preview/session methods;
 - future-study hooks for the deferred paper-strength items;
-- **63 automated tests**.
+- **142 automated tests** after M6 integration.
 
-Actual Fusion/Defusion transformations, Composition/Decomposition, full macro Coherency/Recall/Precision/F1, and the complete multi-generation experiment loop remain later milestones. They are not fabricated merely to make the checklist look complete.
+Fusion/Defusion target-genome execution and deterministic Composition/Decomposition are implemented in M6. Real Fusion/Defusion **content realization** remains intentionally deferred to M5B because it requires the real local-model layer. Full macro metrics and final experiment execution remain later milestones.
 
 See `PRIORITY_SCOPE.md` for the exact blue-row mapping and dependency rationale.
 
@@ -52,10 +55,10 @@ python scripts/smoke_service.py
 python scripts/smoke_priority.py
 ```
 
-Expected test result for this package:
+Current M6 integration target:
 
 ```text
-63 passed
+145 passed
 ```
 
 ### Real CSO-backed analysis

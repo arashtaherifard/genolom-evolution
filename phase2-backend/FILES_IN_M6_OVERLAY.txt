@@ -1,0 +1,17 @@
+README.md
+CHANGELOG.md
+PRIORITY_SCOPE.md
+TECHNICAL_SPEC.md
+UI_CONTRACT.md
+MILESTONE6_IMPLEMENTATION.md
+M6_TEST_STATUS.md
+src/genolom_evolution/evolution/__init__.py
+src/genolom_evolution/evolution/dna.py
+src/genolom_evolution/evolution/fusion_defusion.py
+src/genolom_evolution/evolution/composition.py
+src/genolom_evolution/evolution/session.py
+src/genolom_evolution/service/engine.py
+tests/test_m6_fusion_dna.py
+tests/test_m6_composition_decomposition.py
+tests/test_m6_structural_session.py
+tests/test_m6_service_contract.py

@@ -80,9 +80,17 @@ Perish marks/removes an LO when Longevity Chance is at or below the configured t
 
 Final numeric longevity parameters are intentionally not guessed in the frozen default config.
 
-## 11. Fusion/Defusion History and Threshold
+## 11. Fusion / Defusion / Composition / Decomposition
 
-History records are executable state variables. Threshold policy stores lower/upper operation-count bounds and can gate future operations at the upper bound. Actual Fusion/Defusion genome transformation rules are later non-priority work and are not fabricated.
+History records remain executable state variables and the threshold policy gates Fusion/Defusion participation. M6 adds proposal-traceable structural execution:
+
+- Fusion encodes proposal Table-2 categorical metadata as one-hot DNA, age as 7 bits, and learning time as a 6-bit 0–45 minute field; Phase-1/Table-2 LRT label mismatches are handled through a logged DNA-boundary compatibility adapter, and fractional Phase-1 minute estimates are deterministically quantized to whole proposal minutes only for Fusion encoding. Fusion applies AND/OR/XOR/NAND, rejects invalid one-hot or otherwise invalid decoded genomes, and never asks an LLM to repair invalid DNA.
+- Description and Keywords are excluded from bitwise Fusion. Their deterministic V1 carry-forward policy is explicitly labeled as an operationalization.
+- Defusion is not treated as a mathematically invertible bitwise operator because the proposal does not specify a sufficient inverse. V1 only recovers component target genomes from stored Fusion provenance.
+- Composition is deterministic and structural. Parent contents remain identifiable, ordered, role-labelled components; no LLM rewriting occurs.
+- Decomposition only executes for stored Composition-V1 structures and exactly recovers stored components. Unstructured multimedia boundary discovery remains deferred.
+
+Real Fusion/Defusion content realization remains deferred to M5B.
 
 ## 12. Coverage
 

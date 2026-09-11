@@ -9,7 +9,20 @@ from .lifecycle import (
     update_longevity_end_of_generation,
     apply_perish,
 )
-from .fusion_defusion import FusionDefusionThreshold
+from .fusion_defusion import (
+    FusionDefusionThreshold,
+    FusionResult,
+    DefusionResult,
+    fuse_genomes,
+    recover_defusion_components,
+)
+from .dna import FusionBinaryOperator, encode_genome_dna
+from .composition import (
+    CompositionResult,
+    DecompositionResult,
+    compose_individuals,
+    recover_composition_components,
+)
 
 __all__ = [
     "EligibilityResult",
@@ -28,8 +41,19 @@ __all__ = [
     "update_longevity_end_of_generation",
     "apply_perish",
     "FusionDefusionThreshold",
+    "FusionResult",
+    "DefusionResult",
+    "fuse_genomes",
+    "recover_defusion_components",
+    "FusionBinaryOperator",
+    "encode_genome_dna",
+    "CompositionResult",
+    "DecompositionResult",
+    "compose_individuals",
+    "recover_composition_components",
     "PriorityEvolutionSession",
     "AppliedOperatorResult",
+    "AppliedStructuralOperatorResult",
 ]
 
 
@@ -43,12 +67,17 @@ __all__ = [
 # PriorityEvolutionSession``) but resolve these two session-level symbols only
 # when a caller actually asks for them.
 def __getattr__(name: str):
-    if name in {"PriorityEvolutionSession", "AppliedOperatorResult"}:
-        from .session import AppliedOperatorResult, PriorityEvolutionSession
+    if name in {"PriorityEvolutionSession", "AppliedOperatorResult", "AppliedStructuralOperatorResult"}:
+        from .session import (
+            AppliedOperatorResult,
+            AppliedStructuralOperatorResult,
+            PriorityEvolutionSession,
+        )
 
         exports = {
             "PriorityEvolutionSession": PriorityEvolutionSession,
             "AppliedOperatorResult": AppliedOperatorResult,
+            "AppliedStructuralOperatorResult": AppliedStructuralOperatorResult,
         }
         return exports[name]
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
