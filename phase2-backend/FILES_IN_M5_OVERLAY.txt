@@ -1,0 +1,17 @@
+MILESTONE5_IMPLEMENTATION.md
+M5_TEST_STATUS.md
+FILES_IN_M5_OVERLAY.txt
+src/genolom_evolution/content/__init__.py
+src/genolom_evolution/content/generator.py
+src/genolom_evolution/content/validators.py
+src/genolom_evolution/content/prompts.py
+src/genolom_evolution/content/annotation.py
+src/genolom_evolution/content/judging.py
+src/genolom_evolution/content/validation_pipeline.py
+src/genolom_evolution/content/local_models.py
+src/genolom_evolution/content/testing.py
+src/genolom_evolution/content/operators/base.py
+src/genolom_evolution/evolution/session.py
+tests/test_m5_prompts_and_blind_annotation.py
+tests/test_m5_local_generator_and_retry.py
+tests/test_m5_validation_pipeline.py

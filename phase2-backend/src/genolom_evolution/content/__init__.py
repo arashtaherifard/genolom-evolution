@@ -1,6 +1,27 @@
-from .generator import GenerationRequest, GenerationResponse, ContentGenerator
+from .generator import (
+    GenerationRequest,
+    GenerationResponse,
+    ContentGenerator,
+    LocalTextModelBackend,
+    LocalLLMGenerator,
+    DirectBaselineRequest,
+    LocalDirectLLMBaselineGenerator,
+    build_direct_baseline_request,
+)
 from .validators import ContentValidationResult, ContentValidator
 from .grounding import GroundingMode, GroundingEvidence, GroundingContext
+from .prompts import (
+    PromptTemplate,
+    PromptRegistry,
+    DEFAULT_PROMPT_REGISTRY,
+    generation_prompt_id,
+    GENOLOM_CONTENT_GENERATOR_GROUNDED_V1,
+    GENOLOM_CONTENT_GENERATOR_PARAMETRIC_V1,
+    GENOLOM_REALIZED_GENOME_ANNOTATOR_V1,
+    GENOLOM_CLAIM_JUDGE_V1,
+    GENOLOM_CONTENT_REPAIR_V1,
+    GENOLOM_DIRECT_LLM_BASELINE_V1,
+)
 from .proposal_rules import (
     RULE_PROPOSAL_DEFINED,
     RULE_OPERATIONALIZATION,
@@ -32,12 +53,58 @@ from .planning import (
     target_realized_mismatches,
     target_realized_direction_mismatches,
 )
+from .annotation import (
+    DeterministicArtifactFeatures,
+    DeterministicFeatureExtractor,
+    DeterministicKeywordExtractor,
+    AnnotationRequest,
+    MetadataAnnotation,
+    MetadataAnnotator,
+    LocalLLMAnnotator,
+    build_blind_annotation_request,
+    reconcile_realized_genome,
+)
+from .judging import (
+    SUPPORTED,
+    UNSUPPORTED,
+    CONTRADICTED,
+    UNCERTAIN,
+    ENTAILMENT,
+    CONTRADICTION,
+    NEUTRAL,
+    ClaimUnit,
+    DeterministicClaimExtractor,
+    NLIResult,
+    NLIAnalyzer,
+    TopicSimilarityChecker,
+    JudgeRequest,
+    JudgeClaim,
+    JudgeResult,
+    ContentJudge,
+    LocalLLMJudge,
+    build_judge_request,
+)
+from .validation_pipeline import TopicSimilarityCalibration, ScientificContentValidator
+from .local_models import (
+    MPNET_MODEL_NAME,
+    DEBERTA_NLI_MODEL_NAME,
+    MPNetTopicSimilarity,
+    DebertaNLIAnalyzer,
+    TransformersLocalTextBackend,
+)
 from .operators import AbstractionOperator, ElaborationOperator, ProbingOperator, get_content_operator
 
 __all__ = [
     "GenerationRequest", "GenerationResponse", "ContentGenerator",
+    "LocalTextModelBackend", "LocalLLMGenerator",
+    "DirectBaselineRequest", "LocalDirectLLMBaselineGenerator", "build_direct_baseline_request",
     "ContentValidationResult", "ContentValidator",
     "GroundingMode", "GroundingEvidence", "GroundingContext",
+    "PromptTemplate", "PromptRegistry", "DEFAULT_PROMPT_REGISTRY", "generation_prompt_id",
+    "GENOLOM_CONTENT_GENERATOR_GROUNDED_V1",
+    "GENOLOM_CONTENT_GENERATOR_PARAMETRIC_V1",
+    "GENOLOM_REALIZED_GENOME_ANNOTATOR_V1", "GENOLOM_CLAIM_JUDGE_V1",
+    "GENOLOM_CONTENT_REPAIR_V1", "GENOLOM_DIRECT_LLM_BASELINE_V1",
     "RULE_PROPOSAL_DEFINED", "RULE_OPERATIONALIZATION", "RULE_UNSUPPORTED",
     "RULE_CONFIGURED", "RULE_DEFERRED",
     "APPENDIX_A_REFERENCE", "APPENDIX_B_REFERENCE", "APPENDIX_C_REFERENCE",
@@ -49,5 +116,17 @@ __all__ = [
     "DirectionalExpectation", "ContentPlan",
     "compile_structural_content_plan", "compile_proposal_content_plan",
     "target_realized_mismatches", "target_realized_direction_mismatches",
+    "DeterministicArtifactFeatures", "DeterministicFeatureExtractor",
+    "DeterministicKeywordExtractor", "AnnotationRequest", "MetadataAnnotation",
+    "MetadataAnnotator", "LocalLLMAnnotator", "build_blind_annotation_request",
+    "reconcile_realized_genome",
+    "SUPPORTED", "UNSUPPORTED", "CONTRADICTED", "UNCERTAIN",
+    "ENTAILMENT", "CONTRADICTION", "NEUTRAL", "ClaimUnit",
+    "DeterministicClaimExtractor", "NLIResult", "NLIAnalyzer",
+    "TopicSimilarityChecker", "JudgeRequest", "JudgeClaim", "JudgeResult",
+    "ContentJudge", "LocalLLMJudge", "build_judge_request",
+    "TopicSimilarityCalibration", "ScientificContentValidator",
+    "MPNET_MODEL_NAME", "DEBERTA_NLI_MODEL_NAME", "MPNetTopicSimilarity", "DebertaNLIAnalyzer",
+    "TransformersLocalTextBackend",
     "AbstractionOperator", "ElaborationOperator", "ProbingOperator", "get_content_operator",
 ]

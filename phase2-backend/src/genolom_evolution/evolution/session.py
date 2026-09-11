@@ -317,6 +317,8 @@ class PriorityEvolutionSession:
         seed: int | None = None,
         grounding_context=None,
         planning_rules=None,
+        prompt_registry=None,
+        max_attempts: int = 3,
     ) -> dict[str, Any]:
         child = self._find(child_id, include_pending=True)
         if child_id not in self.pending_offspring:
@@ -335,21 +337,31 @@ class PriorityEvolutionSession:
             child.genome if child.target_genome is None else child.target_genome
         )
         content_seed = self._content_seed(child_id, operator_name) if seed is None else seed
-        result = operator.execute(
-            source,
-            target_genome,
-            generator=generator,
-            validator=validator,
-            seed=content_seed,
-            grounding_context=grounding_context,
-            planning_rules=planning_rules,
-        )
+        execute_kwargs = {
+            "generator": generator,
+            "validator": validator,
+            "seed": content_seed,
+            "grounding_context": grounding_context,
+            "planning_rules": planning_rules,
+            "generation_info": {
+                "run_seed": self.seed,
+                "generation": self.generation + 1,
+                "child_id": child_id,
+                "operator": operator_name,
+            },
+            "max_attempts": max_attempts,
+        }
+        if prompt_registry is not None:
+            execute_kwargs["prompt_registry"] = prompt_registry
+        result = operator.execute(source, target_genome, **execute_kwargs)
 
         realized = result.validation.realized_genome
         rejection_reasons: list[str] = []
 
         if not result.accepted:
             rejection_reasons.extend(result.validation.reasons)
+            if getattr(result, "retries_exhausted", False):
+                rejection_reasons.append("max_content_attempts_exhausted")
 
         if result.accepted and realized is None:
             rejection_reasons.append("missing_realized_genome")

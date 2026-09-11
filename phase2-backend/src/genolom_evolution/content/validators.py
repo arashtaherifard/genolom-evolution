@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Any, Protocol
+
 from ..models.genome import GenoLOMGenome
 from .generator import GenerationRequest, GenerationResponse
 
@@ -19,8 +21,16 @@ class ContentValidationResult:
     # generated artifact appears to be. Appended to preserve positional API.
     realized_genome: GenoLOMGenome | None = None
 
+    # M5 retry/repair support. Legacy validators remain one-shot because
+    # retryable defaults to False.
+    retryable: bool = False
+    failure_details: tuple[dict[str, Any], ...] = ()
+
 
 class ContentValidator(Protocol):
     name: str
 
     def validate(self, request: GenerationRequest, response: GenerationResponse) -> ContentValidationResult: ...
+
+
+__all__ = ["ContentValidationResult", "ContentValidator"]
