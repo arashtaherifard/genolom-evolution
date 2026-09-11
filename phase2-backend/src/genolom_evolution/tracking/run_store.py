@@ -16,7 +16,10 @@ class RunStore:
         path.parent.mkdir(parents=True, exist_ok=True)
         if path.exists():
             raise FileExistsError(f"Immutable run artifact already exists: {path}")
-        path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        path.write_text(
+            json.dumps(data, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
         return path
 
     def append_jsonl(self, relative_path: str, data) -> Path:
@@ -25,3 +28,14 @@ class RunStore:
         with path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(data, ensure_ascii=False) + "\n")
         return path
+
+    def write_generation_snapshot(self, generation: int, data) -> Path:
+        if generation < 0:
+            raise ValueError("generation must be >= 0")
+        return self.write_json_once(
+            f"generations/generation_{generation:04d}.json",
+            data,
+        )
+
+    def append_rejected_attempt(self, data) -> Path:
+        return self.append_jsonl("rejected_attempts.jsonl", data)

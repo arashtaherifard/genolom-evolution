@@ -39,5 +39,11 @@ class AcceptingTestValidator:
             faithfulness=1.0 if accepted else 0.0,
             factuality=None,
             reasons=() if accepted else ("empty_content",),
-            metadata={"not_for_scientific_use": True},
+            metadata={
+                "not_for_scientific_use": True,
+                # Explicit test-double behavior. This is never evidence that a
+                # scientific generator really realized its target metadata.
+                "test_double_assumes_target_realization": True,
+            },
+            realized_genome=request.target_genome if accepted else None,
         )

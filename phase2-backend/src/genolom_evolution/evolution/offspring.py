@@ -1,6 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from ..models.genome import GenoLOMGenome
+from ..models.genome_roles import TargetGenome
 from ..models.individual import Individual
 
 
@@ -27,13 +28,19 @@ def create_offspring(
     source_type: str = "",
     source_page: str = "",
     source_row_id: str = "",
+    source_genome: GenoLOMGenome | None = None,
 ) -> Individual:
     if generation < 1:
         raise ValueError("Offspring generation must be >= 1")
+
+    # ``genome`` remains the currently realized/provisional genome for backward
+    # compatibility. A pending child carries its evolutionary intent separately
+    # in target_genome and has no realized_genome yet.
+    current_genome = source_genome if source_genome is not None else target_genome
     return Individual(
         individual_id=allocator.next_id(),
         content=content,
-        genome=target_genome,
+        genome=current_genome,
         source_type=source_type,
         source_page=source_page,
         source_row_id=source_row_id,
@@ -45,4 +52,6 @@ def create_offspring(
         alive=True,
         reproduction_count=0,
         content_status=content_status,
+        target_genome=TargetGenome(target_genome),
+        realized_genome=None,
     )

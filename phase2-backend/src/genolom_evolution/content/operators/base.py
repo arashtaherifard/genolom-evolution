@@ -5,6 +5,7 @@ from typing import Protocol
 from ...models.individual import Individual
 from ...models.genome import GenoLOMGenome
 from ..generator import ContentGenerator, GenerationRequest, GenerationResponse
+from ..planning import compile_structural_content_plan
 from ..validators import ContentValidator, ContentValidationResult
 
 
@@ -24,7 +25,9 @@ class ContentOperationResult:
             "operator_name": self.operator_name,
             "request": {
                 "source_content": self.request.source_content,
+                "source_genome": None if self.request.source_genome is None else self.request.source_genome.to_dict(),
                 "target_genome": self.request.target_genome.to_dict(),
+                "content_plan": None if self.request.content_plan is None else self.request.content_plan.to_dict(),
                 "operator_name": self.request.operator_name,
                 "prompt_template_id": self.request.prompt_template_id,
                 "seed": self.request.seed,
@@ -39,6 +42,11 @@ class ContentOperationResult:
                 "hallucination_flags": list(self.validation.hallucination_flags),
                 "reasons": list(self.validation.reasons),
                 "metadata": self.validation.metadata,
+                "realized_genome": (
+                    None
+                    if self.validation.realized_genome is None
+                    else self.validation.realized_genome.to_dict()
+                ),
             },
         }
 
@@ -72,6 +80,11 @@ class BaseContentOperator:
     instruction = "Transform the source learning object to match the target GenoLOM genome."
 
     def build_request(self, source: Individual, target_genome: GenoLOMGenome, *, seed: int | None = None) -> GenerationRequest:
+        content_plan = compile_structural_content_plan(
+            source.genome,
+            target_genome,
+            operator_name=self.name,
+        )
         return GenerationRequest(
             source_content=source.content,
             target_genome=target_genome,
@@ -82,7 +95,10 @@ class BaseContentOperator:
                 "source_individual_id": source.individual_id,
                 "instruction": self.instruction,
                 "source_genome": source.genome.to_dict(),
+                "planning_stage": content_plan.planning_stage,
             },
+            source_genome=source.genome,
+            content_plan=content_plan,
         )
 
     def execute(

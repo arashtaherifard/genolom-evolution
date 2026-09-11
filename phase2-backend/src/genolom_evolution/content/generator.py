@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 from typing import Any, Protocol
 from ..models.genome import GenoLOMGenome
+from .planning import ContentPlan
 
 
 @dataclass(frozen=True, slots=True)
@@ -12,6 +13,10 @@ class GenerationRequest:
     prompt_template_id: str
     seed: int | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+
+    # Appended for backward-compatible positional construction.
+    source_genome: GenoLOMGenome | None = None
+    content_plan: ContentPlan | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,4 +34,5 @@ class GenerationResponse:
 
 class ContentGenerator(Protocol):
     provider_name: str
+
     def generate(self, request: GenerationRequest) -> GenerationResponse: ...

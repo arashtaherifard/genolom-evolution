@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 from .genome import GenoLOMGenome
+from .genome_roles import TargetGenome, RealizedGenome
 
 
 @dataclass(slots=True)
@@ -15,7 +16,6 @@ class Individual:
     generation_created: int = 0
     parent_ids: tuple[str, ...] = ()
     created_by: str = "initial_population"
-
     # Evolutionary state
     age: int = 0
     longevity_chance: float | None = None
@@ -34,6 +34,18 @@ class Individual:
     # Content-state separation
     content_status: str = "accepted"
     extra: dict[str, Any] = field(default_factory=dict)
+
+    # M3: evolution intent and artifact realization are separate state.
+    target_genome: TargetGenome | None = None
+    realized_genome: RealizedGenome | None = None
+
+    def __post_init__(self) -> None:
+        # Backward compatibility for Generation 0 and legacy accepted objects:
+        # their existing ``genome`` is already an observed/annotated genome.
+        # Pending offspring never take this path, so a target is not silently
+        # promoted to a realized genome.
+        if self.content_status == "accepted" and self.realized_genome is None:
+            self.realized_genome = RealizedGenome(self.genome)
 
     @property
     def coherence(self) -> float | None:
@@ -71,6 +83,8 @@ class Individual:
             "individual_id": self.individual_id,
             "content": self.content,
             "genome": self.genome.to_dict(),
+            "target_genome": None if self.target_genome is None else self.target_genome.to_dict(),
+            "realized_genome": None if self.realized_genome is None else self.realized_genome.to_dict(),
             "source_type": self.source_type,
             "source_page": self.source_page,
             "source_row_id": self.source_row_id,

@@ -10,6 +10,7 @@ from ..fitness.micro import calculate_micro_fitness
 from ..selection.fitness_proportionate import FitnessProportionateSelection
 from ..selection.random_selection import RandomSelection
 from ..tracking.run_store import RunStore
+from .orchestration import run_generations
 
 
 class ExperimentRunner:
@@ -24,13 +25,18 @@ class ExperimentRunner:
         manifest = load_manifest(manifest_path)
         checksum_ok = verify_manifest_dataset(manifest_path, dataset)
         population = load_generation0(dataset)
-        issues = {i.individual_id: [x.to_dict() for x in validate_genome(i.genome)] for i in population}
+        issues = {
+            i.individual_id: [x.to_dict() for x in validate_genome(i.genome)]
+            for i in population
+        }
         issues = {k: v for k, v in issues.items() if v}
-
         coverage = None
         if self.ontology is not None:
             fcfg = self.config["micro_fitness"]
-            dependence_weight = fcfg.get("dependence_weight", fcfg.get("coherence_weight", 0.5))
+            dependence_weight = fcfg.get(
+                "dependence_weight",
+                fcfg.get("coherence_weight", 0.5),
+            )
             for individual in population:
                 result = calculate_micro_fitness(
                     individual.genome.keywords,
@@ -41,20 +47,23 @@ class ExperimentRunner:
                 individual.cohesion = result.cohesion
                 individual.dependence = result.dependence
                 individual.micro_fitness = result.fitness
-
             strategy_name = self.config["selection"]["strategy"]
-            strategy = RandomSelection() if strategy_name == "random" else FitnessProportionateSelection()
+            strategy = (
+                RandomSelection()
+                if strategy_name == "random"
+                else FitnessProportionateSelection()
+            )
             probs = strategy.probabilities(population)
             for individual, prob in zip(population, probs):
                 individual.selection_probability = prob
-
             if hasattr(self.ontology, "reference_topics"):
                 coverage = calculate_coverage(
                     population,
                     self.ontology,
-                    coverage_threshold=int(self.config.get("coverage", {}).get("threshold", 1)),
+                    coverage_threshold=int(
+                        self.config.get("coverage", {}).get("threshold", 1)
+                    ),
                 ).to_dict()
-
         return {
             "dataset": manifest,
             "checksum_ok": checksum_ok,
@@ -76,3 +85,23 @@ class ExperimentRunner:
         store.write_json_once("config_snapshot.json", self.config)
         store.write_json_once("initial_analysis.json", serializable)
         return store.path
+
+    def run_multi_generation(
+        self,
+        session,
+        *,
+        generation_count: int,
+        generation_step,
+        store: RunStore | None = None,
+    ):
+        """M3 orchestration hook.
+
+        ``generation_step`` is required so this layer never silently invents
+        operator scheduling, stopping criteria, or offspring budgets.
+        """
+        return run_generations(
+            session,
+            generation_count=generation_count,
+            generation_step=generation_step,
+            store=store,
+        )
