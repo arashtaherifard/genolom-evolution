@@ -29,6 +29,7 @@ def create_offspring(
     source_page: str = "",
     source_row_id: str = "",
     source_genome: GenoLOMGenome | None = None,
+    use_target_as_current_genome: bool = False,
 ) -> Individual:
     if generation < 1:
         raise ValueError("Offspring generation must be >= 1")
@@ -36,7 +37,11 @@ def create_offspring(
     # ``genome`` remains the currently realized/provisional genome for backward
     # compatibility. A pending child carries its evolutionary intent separately
     # in target_genome and has no realized_genome yet.
-    current_genome = source_genome if source_genome is not None else target_genome
+    current_genome = (
+        target_genome
+        if use_target_as_current_genome
+        else (source_genome if source_genome is not None else target_genome)
+    )
     return Individual(
         individual_id=allocator.next_id(),
         content=content,

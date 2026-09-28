@@ -18,6 +18,7 @@ from .operator_rules import (
     semantic_density_mutation_action,
     difficulty_mutation_action,
 )
+from .proposal_matrices import metamorphosis_targets
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,7 +73,11 @@ def _candidate(genome: GenoLOMGenome, gene: str, value: Any) -> GenoLOMGenome:
     return replace(genome, **{gene: value})
 
 
-def viable_mutation_options(genome: GenoLOMGenome) -> list[MutationOption]:
+def viable_mutation_options(
+    genome: GenoLOMGenome,
+    *,
+    use_metamorphosis_matrix: bool = False,
+) -> list[MutationOption]:
     """Enumerate only proposal-rule mutations that leave a valid target genome.
 
     We do not invent mutation behavior for GenoLOM genes that the proposal does
@@ -81,15 +86,29 @@ def viable_mutation_options(genome: GenoLOMGenome) -> list[MutationOption]:
     """
     options: list[MutationOption] = []
 
-    for target in valid_learning_resource_mutation_targets(genome.learningResourceType):
+    lrt_targets = (
+        metamorphosis_targets(genome.learningResourceType)
+        if use_metamorphosis_matrix
+        else valid_learning_resource_mutation_targets(genome.learningResourceType)
+    )
+    for target in lrt_targets:
         transition = get_learning_resource_transition(genome.learningResourceType, target)
-        if transition is None or transition.action is ResourceTransformAction.DROP:
-            continue
+        if not use_metamorphosis_matrix:
+            if transition is None or transition.action is ResourceTransformAction.DROP:
+                continue
         candidate = _candidate(genome, "learningResourceType", target)
         if not validate_genome(candidate):
+            if transition is not None and transition.action is not ResourceTransformAction.DROP:
+                action = transition.action.value
+                requires_conversion = transition.requires_content_conversion
+            else:
+                action = "metamorphosis_matrix_allowed"
+                # Content semantics may be unsupported later even though the
+                # genome transition is proposal-eligible.
+                requires_conversion = True
             options.append(MutationOption(
                 "learningResourceType", genome.learningResourceType, target,
-                transition.action.value, transition.requires_content_conversion,
+                action, requires_conversion,
             ))
 
     for target in _neighbor_values(genome.interactivityLevel, INTERACTIVITY_LEVELS):
@@ -119,7 +138,13 @@ def viable_mutation_options(genome: GenoLOMGenome) -> list[MutationOption]:
     return options
 
 
-def mutate_individual(parent: Individual, *, rate: float, rng: random.Random) -> MutationResult:
+def mutate_individual(
+    parent: Individual,
+    *,
+    rate: float,
+    rng: random.Random,
+    use_metamorphosis_matrix: bool = False,
+) -> MutationResult:
     triggered, draw = rate_trigger(rate, rng)
     if not triggered:
         return MutationResult(
@@ -127,7 +152,9 @@ def mutate_individual(parent: Individual, *, rate: float, rng: random.Random) ->
             parent.genome, (), "rate_not_triggered",
         )
 
-    options = viable_mutation_options(parent.genome)
+    options = viable_mutation_options(
+        parent.genome, use_metamorphosis_matrix=use_metamorphosis_matrix
+    )
     if not options:
         return MutationResult(
             parent.individual_id, True, False, float(rate), draw, None,

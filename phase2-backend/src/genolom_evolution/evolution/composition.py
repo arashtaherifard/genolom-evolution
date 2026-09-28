@@ -111,6 +111,7 @@ def compose_individuals(
     parents: Sequence[Individual],
     *,
     roles: Sequence[str] | None = None,
+    genome_only: bool = False,
 ) -> CompositionResult:
     if len(parents) < 2:
         raise ValueError("Composition requires at least two parent learning objects.")
@@ -139,8 +140,9 @@ def compose_individuals(
         parts.append(header)
         cursor += len(header)
         start = cursor
-        parts.append(parent.content)
-        cursor += len(parent.content)
+        component_content = "" if genome_only else parent.content
+        parts.append(component_content)
+        cursor += len(component_content)
         end = cursor
         footer = "\n</component>\n"
         parts.append(footer)
@@ -151,7 +153,7 @@ def compose_individuals(
                 source_parent_id=parent.individual_id,
                 order=index,
                 role=role,
-                content=parent.content,
+                content=component_content,
                 genome=parent.genome,
                 source_type=parent.source_type,
                 source_page=parent.source_page,
@@ -161,7 +163,7 @@ def compose_individuals(
             )
         )
 
-    content = "".join(parts)
+    content = "" if genome_only else "".join(parts)
     # The proposal defines structural composition but not how a compound
     # container gets a single GenoLOM genome. V1 inherits the first ordered
     # component genome solely as an envelope/backward-compatibility field; all
@@ -184,6 +186,7 @@ def compose_individuals(
                 "source-row ordering only when all parents share a source and numeric row ids",
                 "selection order fallback",
                 "first ordered component genome used as nonsemantic container envelope",
+                "genome-only mode stores structural component provenance without realized content" if genome_only else "realized deterministic envelope retained",
                 "no LLM rewriting",
             ],
             "format_version": COMPOUND_FORMAT_VERSION,

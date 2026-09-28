@@ -10,3 +10,9 @@ outputs/summaries/*
 !outputs/summaries/.gitkeep
 outputs/figures/*
 !outputs/figures/.gitkeep
+
+outputs/evolution/*
+!outputs/evolution/.gitkeep
+
+# Generated evolution runs
+outputs/

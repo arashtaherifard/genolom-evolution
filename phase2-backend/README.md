@@ -1,5 +1,7 @@
 # Phase 2 Backend - GenoLOM Evolution
 
+> **Current checkpoint: M7 — Complete Genome-Only Evolution.** The genetic side can now run from frozen G0 through a configured final generation without content generation and export every generation, the final generation, historical genome archive, unique genome library, lineage, logs and macro metrics. See `MILESTONE7_GENOME_EVOLUTION_COMPLETE.md`.
+
 Research-grade, UI-aware backend for Phase 2 of the GenoLOM evolutionary educational-content project.
 
 ## Status

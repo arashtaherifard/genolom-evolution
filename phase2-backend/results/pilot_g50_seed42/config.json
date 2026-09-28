@@ -1,0 +1,108 @@
+{
+  "project": {
+    "name": "genolom-evolution",
+    "phase": 2,
+    "mode": "genome_evolution_development",
+    "protocol_status": "development_only_genome_evolution_not_final_results"
+  },
+  "dataset": {
+    "path": "data/generation_0.xlsx",
+    "manifest": "data/dataset_manifest.json"
+  },
+  "reproducibility": {
+    "seed": 42
+  },
+  "micro_fitness": {
+    "cohesion_weight": 0.5,
+    "dependence_weight": 0.5,
+    "weight_grid_step": 0.1
+  },
+  "selection": {
+    "strategy": "fitness_proportionate",
+    "zero_fitness_fallback": "uniform",
+    "repeated_parent_selection": true
+  },
+  "evolution": {
+    "max_generations": 50,
+    "convergence": {
+      "enabled": false,
+      "epsilon": 0.001,
+      "patience": 5
+    },
+    "mutation": {
+      "enabled": true,
+      "rate": 0.1
+    },
+    "crossover": {
+      "enabled": true,
+      "rate": 0.7
+    },
+    "maturity_age": 1,
+    "max_parent_participations_per_generation": 5,
+    "longevity": {
+      "enabled": true,
+      "initial_chance": 3.0,
+      "reproduction_reward": 1.0,
+      "inactivity_penalty": 1.0
+    },
+    "perish": {
+      "enabled": true,
+      "threshold": 0.0
+    },
+    "fusion_defusion": {
+      "history_tracking_enabled": true,
+      "threshold": {
+        "minimum": 0,
+        "maximum": 5
+      }
+    },
+    "genome_only_mode": true
+  },
+  "coverage": {
+    "threshold": 1,
+    "reference_root": "computer science",
+    "report_thresholds": [
+      1,
+      2,
+      3,
+      5
+    ]
+  },
+  "content": {
+    "enabled": false,
+    "generator_provider": null,
+    "generator_model": null,
+    "validate_before_acceptance": true,
+    "operators": {
+      "abstraction": true,
+      "elaboration": true,
+      "probing": true
+    }
+  },
+  "outputs": {
+    "root": "outputs/evolution"
+  },
+  "genome_evolution": {
+    "attempt_budget": {
+      "mode": "active_population",
+      "multiplier": 1.0,
+      "minimum": 1,
+      "maximum": 1000
+    },
+    "operator_weights": {
+      "mutation": 0.35,
+      "crossover": 0.35,
+      "fusion": 0.1,
+      "defusion": 0.05,
+      "composition": 0.1,
+      "decomposition": 0.05
+    },
+    "composition_parent_count": 2,
+    "fusion_binary_operators": [
+      "AND",
+      "OR",
+      "XOR",
+      "NAND"
+    ]
+  }
+}

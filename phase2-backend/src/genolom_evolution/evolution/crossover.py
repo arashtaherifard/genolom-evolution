@@ -18,6 +18,7 @@ from .operator_rules import (
     crossover_semantic_density,
     crossover_difficulty,
 )
+from .proposal_matrices import is_metamorphosis_allowed
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,9 +64,22 @@ class CrossoverResult:
         }
 
 
-def _choose_lrt(a: str, b: str, base: str) -> tuple[str, str]:
+def _choose_lrt(
+    a: str,
+    b: str,
+    base: str,
+    *,
+    use_metamorphosis_matrix: bool = False,
+) -> tuple[str, str]:
     if a == b:
         return a, "same_parent_type"
+
+    if use_metamorphosis_matrix:
+        if is_metamorphosis_allowed(a, b):
+            return b, f"figure14_metamorphosis:{a}->{b}"
+        if is_metamorphosis_allowed(b, a):
+            return a, f"figure14_metamorphosis:{b}->{a}"
+        return base, "conservative_parent_inheritance_figure14_forbids_cross_type"
 
     a_to_b = get_learning_resource_transition(a, b)
     b_to_a = get_learning_resource_transition(b, a)
@@ -125,6 +139,7 @@ def crossover_individuals(
     *,
     rate: float,
     rng: random.Random,
+    use_metamorphosis_matrix: bool = False,
 ) -> CrossoverResult:
     triggered, draw = rate_trigger(rate, rng)
     base_parent = rng.choice([parent_a, parent_b])
@@ -136,7 +151,12 @@ def crossover_individuals(
         )
 
     a, b = parent_a.genome, parent_b.genome
-    lrt, lrt_rule = _choose_lrt(a.learningResourceType, b.learningResourceType, base_parent.genome.learningResourceType)
+    lrt, lrt_rule = _choose_lrt(
+        a.learningResourceType,
+        b.learningResourceType,
+        base_parent.genome.learningResourceType,
+        use_metamorphosis_matrix=use_metamorphosis_matrix,
+    )
 
     raw = replace(
         base_parent.genome,

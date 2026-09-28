@@ -1,0 +1,11 @@
+{
+  "run_id": "run-20260926T074102Z-f046b3e2",
+  "run_path": "/Users/arash/Desktop/atf/university/Research/Team 405/phase2-backend/outputs/evolution/run-20260926T074102Z-f046b3e2",
+  "requested_final_generation": 50,
+  "completed_final_generation": 50,
+  "final_population_size": 3156,
+  "archive_size": 24571,
+  "unique_genome_count": 2079,
+  "extinct": false,
+  "reference_checksum": "9d0f5540e37e4922501fea76ea5ff562712abffe611c55e37d3152ffb2eb97bc"
+}

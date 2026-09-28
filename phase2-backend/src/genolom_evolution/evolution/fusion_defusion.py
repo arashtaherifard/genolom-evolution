@@ -116,6 +116,7 @@ def fuse_genomes(
     parent_b: Individual,
     *,
     binary_operator: str | FusionBinaryOperator,
+    include_content_provenance: bool = True,
 ) -> FusionResult:
     """Apply proposal binary Fusion to parent GenoLOM DNA.
 
@@ -188,7 +189,7 @@ def fuse_genomes(
         "parent_snapshots": [
             {
                 "individual_id": parent_a.individual_id,
-                "content": parent_a.content,
+                "content": parent_a.content if include_content_provenance else "",
                 "genome": parent_a.genome.to_dict(),
                 "source_type": parent_a.source_type,
                 "source_page": parent_a.source_page,
@@ -196,7 +197,7 @@ def fuse_genomes(
             },
             {
                 "individual_id": parent_b.individual_id,
-                "content": parent_b.content,
+                "content": parent_b.content if include_content_provenance else "",
                 "genome": parent_b.genome.to_dict(),
                 "source_type": parent_b.source_type,
                 "source_page": parent_b.source_page,
@@ -204,6 +205,7 @@ def fuse_genomes(
             },
         ],
         "excluded_from_bitwise_fusion": ["description", "keywords"],
+        "content_provenance_included": bool(include_content_provenance),
         "parent_a_dna_normalizations": [x.to_dict() for x in a_encoded.normalizations],
         "parent_b_dna_normalizations": [x.to_dict() for x in b_encoded.normalizations],
     }

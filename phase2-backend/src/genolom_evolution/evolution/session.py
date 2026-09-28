@@ -44,6 +44,7 @@ from .fusion_defusion import (
     record_defusion_participation,
 )
 from .composition import compose_individuals, recover_composition_components
+from .proposal_matrices import are_composition_parents_compatible
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,6 +95,9 @@ class PriorityEvolutionSession:
         self.pending_offspring: dict[str, Individual] = {}
         self.config = config
         self.seed = int(config.get("reproducibility", {}).get("seed", 42) if seed is None else seed)
+        self.genome_only_mode = bool(
+            config.get("evolution", {}).get("genome_only_mode", False)
+        )
 
         # Evolutionary randomness remains independent of content randomness.
         self.evolution_rng = random.Random(self.seed)
@@ -118,11 +122,28 @@ class PriorityEvolutionSession:
 
     @property
     def active_population(self) -> list[Individual]:
+        if self.genome_only_mode:
+            return [
+                individual
+                for individual in self.population
+                if individual.alive and individual.content_status not in {"rejected"}
+            ]
         return [
             individual
             for individual in self.population
             if individual.alive and individual.content_status == "accepted"
         ]
+
+    def _offspring_content_status(self) -> str:
+        return "unrealized" if self.genome_only_mode else "pending_generation"
+
+    def _offspring_content(self, inherited: str = "") -> str:
+        return "" if self.genome_only_mode else inherited
+
+    def _record_genome_success(self, parent_ids: Sequence[str]) -> None:
+        if self.genome_only_mode:
+            for parent_id in parent_ids:
+                self.successful_parent_participations[str(parent_id)] += 1
 
     def _find(self, individual_id: str, *, include_pending: bool = True) -> Individual:
         for individual in self.population:
@@ -145,9 +166,7 @@ class PriorityEvolutionSession:
         cfg = self.config["micro_fitness"]
         dependence_weight = cfg.get("dependence_weight", cfg.get("coherence_weight", 0.5))
         out: dict[str, dict[str, float]] = {}
-        for individual in self.population:
-            if not individual.alive or individual.content_status != "accepted":
-                continue
+        for individual in self.active_population:
             result = calculate_micro_fitness(
                 individual.genome.keywords,
                 ontology,
@@ -206,6 +225,7 @@ class PriorityEvolutionSession:
             parent,
             rate=rate,
             rng=self.evolution_rng,
+            use_metamorphosis_matrix=self.genome_only_mode,
         )
         parent.generation_participations += 1
         if not result.applied:
@@ -227,11 +247,12 @@ class PriorityEvolutionSession:
             created_by="mutation",
             target_genome=result.target_genome,
             source_genome=parent.genome,
-            content=parent.content,
-            content_status="pending_generation",
+            content=self._offspring_content(parent.content),
+            content_status=self._offspring_content_status(),
             source_type=parent.source_type,
             source_page=parent.source_page,
             source_row_id=parent.source_row_id,
+            use_target_as_current_genome=self.genome_only_mode,
         )
         child.extra.update(
             {
@@ -241,6 +262,7 @@ class PriorityEvolutionSession:
             }
         )
         self.pending_offspring[child.individual_id] = child
+        self._record_genome_success((parent_id,))
         event = EvolutionEvent(
             event_type="mutation",
             generation=self.generation + 1,
@@ -283,6 +305,7 @@ class PriorityEvolutionSession:
             b,
             rate=rate,
             rng=self.evolution_rng,
+            use_metamorphosis_matrix=self.genome_only_mode,
         )
         a.generation_participations += 1
         b.generation_participations += 1
@@ -306,11 +329,12 @@ class PriorityEvolutionSession:
             created_by="crossover",
             target_genome=result.target_genome,
             source_genome=base.genome,
-            content=base.content,
-            content_status="pending_generation",
+            content=self._offspring_content(base.content),
+            content_status=self._offspring_content_status(),
             source_type=base.source_type,
             source_page=base.source_page,
             source_row_id=base.source_row_id,
+            use_target_as_current_genome=self.genome_only_mode,
         )
         child.extra.update(
             {
@@ -320,6 +344,7 @@ class PriorityEvolutionSession:
             }
         )
         self.pending_offspring[child.individual_id] = child
+        self._record_genome_success((parent_a_id, parent_b_id))
         event = EvolutionEvent(
             event_type="crossover",
             generation=self.generation + 1,
@@ -372,7 +397,12 @@ class PriorityEvolutionSession:
 
         a.generation_participations += 1
         b.generation_participations += 1
-        result = fuse_genomes(a, b, binary_operator=binary_operator)
+        result = fuse_genomes(
+            a,
+            b,
+            binary_operator=binary_operator,
+            include_content_provenance=not self.genome_only_mode,
+        )
         if not result.success or result.target_genome is None:
             event = EvolutionEvent(
                 event_type="fusion_failed",
@@ -392,8 +422,9 @@ class PriorityEvolutionSession:
             created_by="fusion",
             target_genome=result.target_genome,
             source_genome=a.genome,
-            content=a.content,
-            content_status="pending_generation",
+            content=self._offspring_content(a.content),
+            content_status=self._offspring_content_status(),
+            use_target_as_current_genome=self.genome_only_mode,
         )
         child.extra.update(
             {
@@ -405,6 +436,7 @@ class PriorityEvolutionSession:
             }
         )
         self.pending_offspring[child.individual_id] = child
+        self._record_genome_success((parent_a_id, parent_b_id))
         event = EvolutionEvent(
             event_type="fusion_target_created",
             generation=self.generation + 1,
@@ -454,11 +486,12 @@ class PriorityEvolutionSession:
                 created_by="defusion",
                 target_genome=component.target_genome,
                 source_genome=fused.genome,
-                content=fused.content,
-                content_status="pending_generation",
+                content=self._offspring_content(fused.content),
+                content_status=self._offspring_content_status(),
                 source_type=component.source_metadata.get("source_type", ""),
                 source_page=component.source_metadata.get("source_page", ""),
                 source_row_id=component.source_metadata.get("source_row_id", ""),
+                use_target_as_current_genome=self.genome_only_mode,
             )
             child.extra.update(
                 {
@@ -484,6 +517,7 @@ class PriorityEvolutionSession:
         for child in children:
             record_defusion_participation(child, event.event_id, policy)
         self.lineage.record(event)
+        self._record_genome_success((fused_id,))
         return AppliedStructuralOperatorResult(
             "defusion",
             result.to_dict(),
@@ -502,6 +536,12 @@ class PriorityEvolutionSession:
         if len(set(parent_ids)) != len(parent_ids):
             raise ValueError("Composition requires distinct parent individuals.")
         parents = [self._find(parent_id, include_pending=False) for parent_id in parent_ids]
+        if not are_composition_parents_compatible(
+            [parent.genome.learningResourceType for parent in parents]
+        ):
+            raise ValueError(
+                "Composition Matrix (Proposal Figure 15) does not allow the selected parent types."
+            )
         for parent in parents:
             eligibility = self.eligibility(parent.individual_id, operator="composition")
             if not eligibility["eligible"]:
@@ -512,7 +552,9 @@ class PriorityEvolutionSession:
 
         for parent in parents:
             parent.generation_participations += 1
-        result = compose_individuals(parents, roles=roles)
+        result = compose_individuals(
+            parents, roles=roles, genome_only=self.genome_only_mode
+        )
         ordered_parent_ids = tuple(result.provenance["parent_ids"])
         child = create_offspring(
             allocator=self.allocator,
@@ -521,8 +563,9 @@ class PriorityEvolutionSession:
             created_by="composition",
             target_genome=result.container_genome,
             source_genome=result.container_genome,
-            content=result.content,
-            content_status="accepted",
+            content=self._offspring_content(result.content),
+            content_status=("unrealized" if self.genome_only_mode else "accepted"),
+            use_target_as_current_genome=self.genome_only_mode,
         )
         child.extra.update(
             {
@@ -578,11 +621,12 @@ class PriorityEvolutionSession:
                 created_by="decomposition",
                 target_genome=component.genome,
                 source_genome=component.genome,
-                content=component.content,
-                content_status="accepted",
+                content=self._offspring_content(component.content),
+                content_status=("unrealized" if self.genome_only_mode else "accepted"),
                 source_type=component.source_type,
                 source_page=component.source_page,
                 source_row_id=component.source_row_id,
+                use_target_as_current_genome=self.genome_only_mode,
             )
             child.extra.update(
                 {
@@ -800,16 +844,18 @@ class PriorityEvolutionSession:
             self.population,
             threshold=policy.perish_threshold,
             generation=self.generation + 1,
+            preserve_content_status=self.genome_only_mode,
         )
         for event in perish_events:
             self.lineage.record(event)
 
         age_survivors(self.population)
 
+        admitted_statuses = {"accepted", "unrealized"} if self.genome_only_mode else {"accepted"}
         accepted = [
             child
             for child in self.pending_offspring.values()
-            if child.content_status == "accepted"
+            if child.content_status in admitted_statuses
         ]
         rejected = [
             child
@@ -856,6 +902,8 @@ class PriorityEvolutionSession:
 
         return {
             "completed_generation": completed_generation,
+            "genome_only_mode": self.genome_only_mode,
+            "admitted_offspring_count": len(accepted),
             "accepted_offspring_count": len(accepted),
             "rejected_offspring_count": len(rejected),
             "perished_count": len(perish_events),
@@ -887,6 +935,7 @@ class PriorityEvolutionSession:
         return {
             "seed": self.seed,
             "generation": self.generation,
+            "genome_only_mode": self.genome_only_mode,
             # Existing key retained for backward compatibility.
             "population": [i.to_dict() for i in self.population],
             "active_population": [i.to_dict() for i in self.active_population],

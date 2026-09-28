@@ -89,6 +89,35 @@ class CSOOntologyAdapter:
         except Exception:
             return None
         return self._clean_distance(value)
+
+    @lru_cache(maxsize=None)
+    def hierarchy_path(self, ancestor_topic: str, descendant_topic: str) -> tuple[str, ...] | None:
+        """Return the directed shortest hierarchy path ancestor -> descendant.
+
+        This is used by the frozen generation-level Precision operationalization
+        so intermediate CSO nodes can be included explicitly.  Merely sharing a
+        distant common ancestor does not create a path between two covered
+        concepts.
+        """
+        ancestor = self.resolve_topic(ancestor_topic)
+        descendant = self.resolve_topic(descendant_topic)
+        if ancestor is None or descendant is None:
+            return None
+        if ancestor == descendant:
+            return (ancestor,)
+        try:
+            paths = self.graph.get_shortest_paths(
+                ancestor,
+                to=descendant,
+                mode=self.hierarchy_mode,
+                output="vpath",
+            )
+            if not paths or not paths[0]:
+                return None
+            return tuple(str(self.graph.vs[index]["name"]) for index in paths[0])
+        except Exception:
+            return None
+
     @lru_cache(maxsize=1)
     def reference_topics(self) -> tuple[str, ...]:
         """Return the CSO reference slice reachable from the configured root.

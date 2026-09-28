@@ -88,6 +88,7 @@ def apply_perish(
     *,
     threshold: float = 0.0,
     generation: int,
+    preserve_content_status: bool = False,
 ) -> list[EvolutionEvent]:
     events: list[EvolutionEvent] = []
     for individual in population:
@@ -95,7 +96,9 @@ def apply_perish(
             continue
         if individual.longevity_chance <= threshold:
             individual.alive = False
-            individual.content_status = "perished"
+            if not preserve_content_status:
+                individual.content_status = "perished"
+            individual.extra["perished_generation"] = generation
             events.append(EvolutionEvent(
                 event_type="perish",
                 generation=generation,
