@@ -75,6 +75,9 @@ def main() -> int:
     print(f"Historical archive individuals: {result.archive_size}")
     print(f"Unique genome variants: {result.unique_genome_count}")
     print(f"Extinct: {result.extinct}")
+    print(f"Stop reason: {result.stop_reason}")
+    if result.convergence_generation is not None:
+        print(f"Convergence generation: {result.convergence_generation}")
     return 0 if not result.extinct else 3
 
 

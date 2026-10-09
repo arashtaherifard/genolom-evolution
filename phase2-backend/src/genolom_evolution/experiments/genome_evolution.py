@@ -12,6 +12,7 @@ from typing import Any, Iterable
 
 from ..dataio.generation0 import load_generation0
 from ..dataio.manifest import load_manifest, verify_manifest_dataset
+from ..evaluation.convergence import ConvergencePolicy, evaluate_convergence
 from ..evaluation.diversity import population_diversity
 from ..evaluation.macro import calculate_generation_macro_metrics
 from ..evaluation.reference import ReferenceConceptSet, build_reference_concept_set
@@ -40,6 +41,8 @@ class GenomeEvolutionRunResult:
     unique_genome_count: int
     extinct: bool
     reference_checksum: str
+    stop_reason: str = "max_generations_reached"
+    convergence_generation: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -201,6 +204,7 @@ class CompleteGenomeEvolutionRunner:
             for x in self.config.get("coverage", {}).get("report_thresholds", [1, 2, 3, 5])
         )
         policy = GenomeGenerationPolicy(self.config)
+        convergence_policy = ConvergencePolicy.from_config(self.config)
 
         store.write_json_once("config.json", self.config)
         store.write_json_once("reference/t_ref.json", reference.to_dict())
@@ -219,12 +223,16 @@ class CompleteGenomeEvolutionRunner:
                 "t_ref_sha256": reference.checksum,
                 "ontology_name": str(getattr(self.ontology, "name", type(self.ontology).__name__)),
                 "scientific_status": self.config.get("project", {}).get("protocol_status"),
+                "convergence_policy": convergence_policy.to_dict(),
             },
         )
 
         generation_rows: list[dict[str, Any]] = []
         rank_rows: list[dict[str, Any]] = []
         policy_rows: list[dict[str, Any]] = []
+        convergence_rows: list[dict[str, Any]] = []
+        convergence_generation: int | None = None
+        stop_reason = "max_generations_reached"
 
         # Generation 0.
         session.compute_micro_fitness(self.ontology)
@@ -250,6 +258,7 @@ class CompleteGenomeEvolutionRunner:
         for target_generation in range(1, generations + 1):
             if not session.active_population:
                 extinct = True
+                stop_reason = "extinction"
                 break
 
             # Fitness is always fresh before parent selection.
@@ -297,6 +306,15 @@ class CompleteGenomeEvolutionRunner:
             )
             completed_generation = target_generation
 
+            convergence_check = evaluate_convergence(generation_rows, convergence_policy)
+            if convergence_check is not None:
+                convergence_rows.append(convergence_check.to_dict())
+                if convergence_check.converged and convergence_generation is None:
+                    convergence_generation = target_generation
+                if convergence_check.converged and convergence_policy.stop_on_convergence:
+                    stop_reason = "convergence"
+                    break
+
         final_records = [deepcopy(i.to_dict()) for i in session.active_population]
         archive_records = [
             deepcopy(session.historical_archive[key])
@@ -343,6 +361,20 @@ class CompleteGenomeEvolutionRunner:
         )
         write_csv(store.path / "metrics/generation_metrics.csv", generation_rows)
         write_csv(store.path / "metrics/coherency_rank.csv", rank_rows)
+        if convergence_policy.enabled:
+            write_csv(store.path / "metrics/convergence_windows.csv", convergence_rows)
+            store.write_json_once(
+                "convergence/result.json",
+                {
+                    "criterion_status": "FROZEN_M7_1",
+                    "criterion_type": "OUR_OPERATIONALIZATION",
+                    "policy": convergence_policy.to_dict(),
+                    "earliest_convergence_generation": convergence_generation,
+                    "stop_reason": stop_reason,
+                    "completed_generation": completed_generation,
+                    "requested_final_generation": generations,
+                },
+            )
 
         node_rows = lineage_node_rows(archive_records)
         edge_rows = lineage_edge_rows(session.lineage)
@@ -361,6 +393,8 @@ class CompleteGenomeEvolutionRunner:
             unique_genome_count=len(library),
             extinct=extinct,
             reference_checksum=reference.checksum,
+            stop_reason=stop_reason,
+            convergence_generation=convergence_generation,
         )
         store.write_json_once("summary.json", summary.to_dict())
 
