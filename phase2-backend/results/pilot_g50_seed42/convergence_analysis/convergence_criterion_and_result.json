@@ -1,0 +1,11 @@
+{
+  "criterion_status": "FROZEN_M7_1",
+  "criterion_type": "OUR_OPERATIONALIZATION",
+  "minimum_generation": 10,
+  "window": 5,
+  "fitness_range_max": 0.01,
+  "population_relative_range_max": 0.05,
+  "unique_genome_ratio_range_max": 0.02,
+  "recall_range_max": 0.02,
+  "earliest_convergence_generation": null
+}
